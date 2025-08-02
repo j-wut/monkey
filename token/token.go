@@ -7,7 +7,7 @@ type Token struct {
  Literal          string
  FileName         string
  LineNumber       int
- CharacterNumber  int
+ LineCharacter    int
 }
 
 const (
@@ -34,5 +34,16 @@ const (
   // Keywords
   FUNCTION = "FUNCTION"
   LET = "LET"
-
 )
+
+var keywords = map[string]TokenType{
+  "fn": FUNCTION,
+  "let": LET,
+}
+
+func LookupIdent(ident string) TokenType {
+  if tok, ok := keywords[ident]; ok {
+    return tok
+  }
+  return IDENT
+}
