@@ -81,22 +81,40 @@ func (l *Lexer) NextToken() token.Token {
   l.skipWhitespace()
 
   switch l.character {
-  case '=':
-    tokenType = token.ASSIGN
-  case ';':
-    tokenType = token.SEMICOLON
+  // Deliminters
   case '(':
     tokenType = token.LPAREN
   case ')':
     tokenType = token.RPAREN
   case ',':
     tokenType = token.COMMA
-  case '+':
-    tokenType = token.PLUS
+  case ';':
+    tokenType = token.SEMICOLON
   case '{':
     tokenType = token.LBRACE
   case '}':
     tokenType = token.RBRACE
+  // Operators
+  case '=':
+    tokenType = token.ASSIGN
+  case '+':
+    tokenType = token.PLUS
+  case '-':
+    tokenType = token.HYPHEN
+  case '*':
+    tokenType = token.ASTERISK
+  case '/':
+    tokenType = token.SLASH
+  case '!':
+    tokenType = token.BANG
+  case '%':
+    tokenType = token.MOD
+  case '<':
+    tokenType = token.LT
+  case '>':
+    tokenType = token.GT
+
+  // BASE + Ident + Literal + Keywords
   case 0:
     return newToken(token.EOF, "", l.fileName, l.lineNumber, l.lineCharacter)
   default:
