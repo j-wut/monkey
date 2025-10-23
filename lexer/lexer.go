@@ -38,6 +38,10 @@ func (l *Lexer) readChar() {
   l.lineCharacter += 1
 }
 
+func (l *Lexer) peekChar() byte {
+  return l.input[l.readPosition]
+}
+
 func (l *Lexer) skipWhitespace() {
   for l.character == ' ' || l.character == '\t' || l.character == '\n' {
     lastChar := l.character
@@ -51,10 +55,10 @@ func (l *Lexer) skipWhitespace() {
 
 func (l *Lexer) readNum() string {
   position := l.position
-  for isDigit(l.character) {
+  for isDigit(l.peekChar()) {
     l.readChar()
   }
-  return l.input[position:l.position]
+  return l.input[position:l.position + 1]
 }
 
 func isDigit(ch byte) bool {
@@ -63,10 +67,10 @@ func isDigit(ch byte) bool {
 
 func (l *Lexer) readIdentifier() string {
   position := l.position
-  for isLetter(l.character) {
+  for isLetter(l.peekChar()) {
     l.readChar()
   }
-  return l.input[position:l.position]
+  return l.input[position:l.position + 1]
 }
 
 func isLetter(ch byte) bool {
@@ -77,6 +81,11 @@ func (l *Lexer) NextToken() token.Token {
   var tok token.Token
 
   var tokenType token.TokenType
+  
+  var tokenStart int
+  var tokenLiteral string
+  multiChar := false
+  
 
   l.skipWhitespace()
 
@@ -95,8 +104,6 @@ func (l *Lexer) NextToken() token.Token {
   case '}':
     tokenType = token.RBRACE
   // Operators
-  case '=':
-    tokenType = token.ASSIGN
   case '+':
     tokenType = token.PLUS
   case '-':
@@ -105,33 +112,99 @@ func (l *Lexer) NextToken() token.Token {
     tokenType = token.ASTERISK
   case '/':
     tokenType = token.SLASH
-  case '!':
-    tokenType = token.BANG
   case '%':
     tokenType = token.MOD
+  case '=':
+    if l.peekChar() == '=' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.EQ
+    } else {
+      tokenType = token.ASSIGN
+    }
+  case '!':
+    if l.peekChar() == '=' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.NOT_EQ
+    } else {
+      tokenType = token.BANG
+    }
   case '<':
-    tokenType = token.LT
+    if l.peekChar() == '=' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.LT_EQ
+    } else {
+      tokenType = token.LT
+    }
   case '>':
-    tokenType = token.GT
+    if l.peekChar() == '=' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.GT_EQ
+    } else {
+      tokenType = token.GT
+    }
+  case '&':
+    if l.peekChar() == '&' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.AND
+    } else {
+      tokenType = token.ILLEGAL
+    }
+  case '|':
+    if l.peekChar() == '|' {
+      tokenStart = l.lineCharacter
+      ch := l.character
+      l.readChar()
+      tokenLiteral = string(ch) + string(l.character)
+      multiChar = true
+      tokenType = token.OR
+    } else {
+      tokenType = token.ILLEGAL
+    }
+
 
   // BASE + Ident + Literal + Keywords
   case 0:
     return newToken(token.EOF, "", l.fileName, l.lineNumber, l.lineCharacter)
   default:
     if isLetter(l.character) {
-      identLineCharacter := l.lineCharacter
-      identLiteral := l.readIdentifier()
-      return newToken(token.LookupIdent(identLiteral), identLiteral, l.fileName, l.lineNumber, identLineCharacter)
+      tokenStart = l.lineCharacter
+      tokenLiteral = l.readIdentifier()
+      multiChar = true
+      tokenType = token.LookupIdent(tokenLiteral)
     } else if isDigit(l.character) {
-      numLineCharacter := l.lineCharacter
-      numLiteral := l.readNum()
-      return newToken(token.INT, numLiteral, l.fileName, l.lineNumber, numLineCharacter)
+      tokenStart = l.lineCharacter
+      tokenLiteral = l.readNum()
+      multiChar = true
+      tokenType = token.INT
     } else {
-      return newToken(token.ILLEGAL, string(l.character), l.fileName, l.lineNumber, l.lineCharacter)
+      tokenType = token.ILLEGAL
     }
   }
-
-  tok = newToken(tokenType, string(l.character), l.fileName, l.lineNumber, l.lineCharacter)
+  if multiChar {
+    tok = newToken(tokenType, tokenLiteral, l.fileName, l.lineNumber, tokenStart)
+  } else {
+    tok = newToken(tokenType, string(l.character), l.fileName, l.lineNumber, l.lineCharacter)
+  }
   l.readChar()
   return tok
 }

@@ -26,6 +26,8 @@ func TestNextToken(t *testing.T) {
   } else {
     return false;
   }
+
+  == != <= >= && ||;
   `
 
   tests := []struct {
@@ -112,27 +114,35 @@ func TestNextToken(t *testing.T) {
     {token.SEMICOLON, ";", 16, 16},
     //}
     {token.RBRACE, "}", 17, 2},
-
-    {token.EOF, "", 18, 2},
+    //== != <= >= && ||;
+    {token.EQ, "==", 19, 2},
+    {token.NOT_EQ, "!=", 19, 5},
+    {token.LT_EQ, "<=", 19, 8},
+    {token.GT_EQ, ">=", 19, 11},
+    {token.AND, "&&", 19, 14},
+    {token.OR, "||", 19, 17},
+    {token.SEMICOLON, ";", 19, 19},
+    
+    {token.EOF, "", 20, 2},
   }
 
   
 
   l := New(input)
-  for i, tt := range tests {
+    for _, tt := range tests {
     tok := l.NextToken()
 
     if tok.Type != tt.expectedType {
-      t.Fatalf("tests[%d::%v] - tokenType wrong. expected=%q, got=%q", i, tt, tt.expectedType, tok.Type)
+      t.Fatalf("tests[%v::%v] - tokenType wrong. expected=%q, got=%q", tt, tok, tt.expectedType, tok.Type)
     }
     if tok.Literal != tt.expectedLiteral {
-      t.Fatalf("tests[%d::%v] - literal wrong. expected=%s, got=%s", i, tt, tt.expectedLiteral, tok.Literal)
+      t.Fatalf("tests[%v::%v] - literal wrong. expected=%s, got=%s", tt, tok, tt.expectedLiteral, tok.Literal)
     }
     if tok.LineNumber != tt.expectedLineNumber {
-      t.Fatalf("tests[%d::%v] - lineNumber wrong. expected=%d, got=%d", i, tt, tt.expectedLineNumber, tok.LineNumber)
+      t.Fatalf("tests[%v::%v] - lineNumber wrong. expected=%d, got=%d", tt, tok, tt.expectedLineNumber, tok.LineNumber)
     }
     if tok.LineCharacter != tt.expectedLineCharacter {
-      t.Fatalf("tests[%d::%v] - characterNumber wrong. expected=%d, got=%d", i, tt, tt.expectedLineCharacter, tok.LineCharacter)
+      t.Fatalf("tests[%v::%v] - characterNumber wrong. expected=%d, got=%d", tt, tok, tt.expectedLineCharacter, tok.LineCharacter)
     }
   }
 }
