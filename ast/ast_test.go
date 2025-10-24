@@ -34,10 +34,17 @@ func TestString(t *testing.T) {
           Value: "anotherVar",
         },
       },
+      &ExpressionStatement{
+        Token: token.Token{Type: token.INT, Literal: "5"},
+        Expression: &IntegerLiteral{
+          Token: token.Token{Type: token.INT, Literal: "5"},
+          Value: 5,
+        },
+      },
     },
   }
 
-  if program.String() != "let myVar = anotherVar;return anotherVar;anotherVar;" {
+  if program.String() != "let myVar = anotherVar;return anotherVar;anotherVar;5;" {
     t.Errorf("program.String() wrong. got=%q", program.String())
   }
 }
