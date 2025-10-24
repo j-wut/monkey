@@ -8,11 +8,31 @@ import (
   "github.com/j-wut/monkey/token"
 )
 
+const (
+  _ int = iota
+  LOWEST
+  EQUALS      // ==
+  LESSGREATER // > or < or >= or <=
+  SUM         // +
+  PRODDIV     // * or / or %
+  PREFIX      // -x or !x
+  CALL        // function call
+  PARENTH     // in Parenthesis
+)
+
+type (
+  prefixParseFn func()                ast.Expression
+  infixParseFn  func(ast.Expression)  ast.Expression
+)
+
 type Parser struct {
   l *lexer.Lexer
 
   curToken token.Token
   peekToken token.Token
+
+  prefixParseFns map[token.TokenType]prefixParseFn
+  infixParseFns map[token.TokenType]infixParseFn
 
   Errors []string
 }
@@ -26,8 +46,21 @@ func New(l *lexer.Lexer) *Parser {
   p.nextToken()
   p.nextToken()
 
+  p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+  p.registerPrefix(token.IDENT, p.parseIdentifier)
+  p.infixParseFns = make(map[token.TokenType]infixParseFn)
+
   return p
 }
+
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+  p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+  p.infixParseFns[tokenType] = fn
+}
+
 
 func (p *Parser) peekError(t token.TokenType) {
   msg := fmt.Sprintf("%s::%d::%d --- expected next token to be %s, but got %s instead", p.peekToken.FileName, p.peekToken.LineNumber, p.peekToken.LineCharacter, t, p.peekToken.Type)
@@ -63,7 +96,7 @@ func (p *Parser) parseStatement() ast.Statement {
   case token.RETURN:
     return p.parseReturnStatement()
   default:
-    return nil
+    return p.parseExpressionStatement()
   }
 }
 
@@ -95,6 +128,33 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
   // TODO: parse Expression
 
   for !p.curTokenIs(token.SEMICOLON) {
+    p.nextToken()
+  }
+
+  return stmt
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+  return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+  prefix := p.prefixParseFns[p.curToken.Type]
+  if prefix == nil {
+    return nil
+  }
+
+  leftExp := prefix()
+
+  return leftExp
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+  stmt := &ast.ExpressionStatement{Token: p.curToken}
+
+  stmt.Expression = p.parseExpression(LOWEST)
+
+  if p.peekTokenIs(token.SEMICOLON) {
     p.nextToken()
   }
 
