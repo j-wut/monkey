@@ -1,6 +1,7 @@
 package parser
 
 import (
+  "fmt"
   "testing"
 
   "github.com/j-wut/monkey/ast"
@@ -179,14 +180,64 @@ func TestIntegerLiteral(t *testing.T) {
     t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
   }
 
-  literal, ok := stmt.Expression.(*ast.IntegerLiteral)
+  testIntegerLiteral(t, stmt.Expression, 5)
+}
+
+func testIntegerLiteral(t *testing.T, exp ast.Expression, value int64) bool {
+  literal, ok := exp.(*ast.IntegerLiteral)
   if !ok {
-    t.Fatalf("exp not *ast.IntegerLiteral. got=%T", stmt.Expression)
+    t.Fatalf("exp not *ast.IntegerLiteral. got=%T", exp)
+    return false
   }
-  if literal.Value != 5 {
-    t.Errorf("literal.Value not %d. got=%d", 5, literal.Value)
+  if literal.Value != value {
+    t.Errorf("literal.Value not %d. got=%d", value, literal.Value)
+    return false
   }
-  if literal.TokenLiteral() != "5" {
-    t.Errorf("literal.TokenLiteral not %s. got=%s", "5", literal.TokenLiteral())
+
+  strValue := fmt.Sprintf("%d", value)
+
+  if literal.TokenLiteral() != strValue {
+    t.Errorf("literal.TokenLiteral not %s. got=%s", strValue, literal.TokenLiteral())
+    return false
+  }
+  return true
+}
+
+
+func TestParsingPrefixExpressions( t *testing.T) {
+  prefixTests := []struct {
+    input         string
+    operator      string
+    integerValue  int64
+  } {
+    {"!5;", "!", 5},
+    {"-15", "-", 15},
+  }
+
+  for _, tt := range prefixTests {
+    l := lexer.New(tt.input)
+    p := New(l)
+    program := p.ParseProgram()
+    checkParserErrors(t, p)
+
+    if len(program.Statements) != 1 {
+      t.Fatalf("program has not enough statements. expected=1, got=%d", len(program.Statements))
+    }
+
+    stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+    if !ok {
+      t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+    }
+
+    exp, ok := stmt.Expression.(*ast.PrefixExpression)
+    if !ok {
+      t.Fatalf("exp not *ast.PrefixExpression. got=%T", stmt.Expression)
+    }
+    if exp.Operator != tt.operator {
+      t.Errorf("literal.Value not '%s'. got=%s", tt.operator, exp.Operator)
+    }
+    if !testIntegerLiteral(t, exp.Right, tt.integerValue) {
+      return
+    }
   }
 }

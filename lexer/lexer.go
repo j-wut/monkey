@@ -39,6 +39,9 @@ func (l *Lexer) readChar() {
 }
 
 func (l *Lexer) peekChar() byte {
+  if l.readPosition >= len(l.input) {
+    return 0
+  }
   return l.input[l.readPosition]
 }
 
